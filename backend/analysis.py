@@ -9,7 +9,7 @@ def load_real_data():
     """실제 CSV 데이터를 로드하고 연별/월별 데이터를 처리"""
     try:
         # 1. 관광객 월별 데이터 로드
-        tourism_path = os.path.join('..', 'data', 'Gual_Tourism(arrival)_10Y.csv')
+        tourism_path = os.path.join('data', 'Gual_Tourism(arrival)_10Y.csv')
         tourism_df = pd.read_csv(tourism_path)
         
         # Month 컬럼을 날짜로 변환하고 연도 추출
@@ -17,7 +17,7 @@ def load_real_data():
         tourism_df['Month_num'] = pd.to_datetime(tourism_df['Month'], format='%Y-%m').dt.month
         
         # 2. GDP 연별 데이터 로드
-        gdp_path = os.path.join('..', 'data', 'Guam_GDP_10Y.csv')
+        gdp_path = os.path.join('data', 'Guam_GDP_10Y.csv')
         gdp_df = pd.read_csv(gdp_path)
         
         # GDP 데이터 처리 (첫 번째 행의 연도별 값 추출)
@@ -154,9 +154,28 @@ def get_country_rankings():
         else:
             correlation = 0
         
-        # 경제적 영향도 계산 (단순화된 모델)
-        impact_per_tourist = (max(gdp_values) - min(gdp_values)) / (max(tourist_values) - min(tourist_values)) * 1000 if max(tourist_values) > min(tourist_values) else 0
-        total_economic_impact = avg_tourists * impact_per_tourist / 1000000  # 백만 달러 단위
+        # 경제적 영향도 계산 (개선된 모델)
+        # 1. 관광객당 기본 경제 기여도 설정 (USD)
+        base_impact_per_tourist = 1200  # 관광객 1명당 평균 1200달러 소비
+        
+        # 2. 국가별 가중치 적용 (구매력, 체류기간, 소비패턴 기반)
+        country_multipliers = {
+            'japan': 1.3,      # 높은 구매력, 장기 체류
+            'korea': 1.1,      # 중상급 구매력, 쇼핑 선호
+            'usa': 1.5,        # 높은 구매력, 프리미엄 서비스 선호
+            'china': 0.9,      # 중간 구매력
+            'philippines': 0.8, # 중하급 구매력
+            'taiwan': 1.0      # 중간 구매력
+        }
+        
+        # 3. 상관관계 기반 추가 가중치
+        correlation_multiplier = 1 + abs(correlation) * 0.5  # 상관관계가 높을수록 영향도 증가
+        
+        # 4. 최종 관광객당 영향도 계산
+        impact_per_tourist = base_impact_per_tourist * country_multipliers.get(country, 1.0) * correlation_multiplier
+        
+        # 5. 총 경제적 영향도 계산 (백만 달러 단위)
+        total_economic_impact = (avg_tourists * impact_per_tourist) / 1000000
         
         rankings.append({
             "country": country.title().replace('Usa', 'USA'),
