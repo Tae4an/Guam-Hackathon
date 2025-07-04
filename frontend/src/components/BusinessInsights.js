@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Typography, 
   Box, 
@@ -33,371 +33,257 @@ import {
   Business
 } from '@mui/icons-material';
 
-const BusinessInsights = ({ rankings, correlations }) => {
-  const [selectedTab, setSelectedTab] = useState(0);
+const BusinessInsights = ({ viewMode = 'yearly' }) => {
+  const [insightsData, setInsightsData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!rankings || !correlations) return null;
-
-  const countries = [
-    { 
-      key: 'Japan', 
-      name: '일본', 
-      flag: '🇯🇵', 
-      traits: ['정갈함 선호', '품질 중시', '예약 문화', '현금 결제'],
-      spending: 'middle-high',
-      preferences: ['일본 음식', '온천/스파', '문화 체험', '쇼핑']
-    },
-    { 
-      key: 'Korea', 
-      name: '한국', 
-      flag: '🇰🇷', 
-      traits: ['SNS 활용', '한류 관심', '모바일 결제', '단체 여행'],
-      spending: 'middle',
-      preferences: ['K-Food', 'SNS 명소', '쇼핑', '액티비티']
-    },
-    { 
-      key: 'USA', 
-      name: '미국', 
-      flag: '🇺🇸', 
-      traits: ['개인주의', '편의성 중시', '카드 결제', '팁 문화'],
-      spending: 'high',
-      preferences: ['다양한 음식', '럭셔리 서비스', '프라이버시', '편의시설']
-    },
-    { 
-      key: 'China', 
-      name: '중국', 
-      flag: '🇨🇳', 
-      traits: ['단체 관광', '가성비 중시', '위챗페이', '중국어 선호'],
-      spending: 'low-middle',
-      preferences: ['중국 음식', '단체 할인', '가이드 투어', '기념품']
-    }
-  ];
-
-  const businessTypes = [
-    { 
-      type: 'restaurant', 
-      name: '식당/카페', 
-      icon: <RestaurantMenu />,
-      color: '#f44336'
-    },
-    { 
-      type: 'retail', 
-      name: '소매/쇼핑', 
-      icon: <ShoppingBag />,
-      color: '#2196f3'
-    },
-    { 
-      type: 'accommodation', 
-      name: '숙박업', 
-      icon: <Hotel />,
-      color: '#4caf50'
-    },
-    { 
-      type: 'transport', 
-      name: '교통/투어', 
-      icon: <DirectionsCar />,
-      color: '#ff9800'
-    }
-  ];
-
-  const getTopCountries = () => {
-    return rankings.rankings
-      .sort((a, b) => b.total_economic_impact - a.total_economic_impact)
-      .slice(0, 3);
-  };
-
-  const getCountryRecommendations = (countryKey, businessType) => {
-    const recommendations = {
-      Japan: {
-        restaurant: [
-          '일본어 메뉴판 준비 (로마자 병기)',
-          '정갈하고 깔끔한 플레이팅',
-          '예약 시스템 도입',
-          '일본식 서비스 매너 교육'
-        ],
-        retail: [
-          '일본 브랜드 상품 진열',
-          '포장 서비스 강화',
-          '신용카드 결제 시스템',
-          '일본어 안내문 비치'
-        ],
-        accommodation: [
-          '일본식 실내화 제공',
-          '온천/목욕 시설 강조',
-          '조용한 환경 유지',
-          '일본 TV 채널 제공'
-        ],
-        transport: [
-          '시간 준수 철저',
-          '깔끔한 차량 관리',
-          '일본어 가이드 배치',
-          '문화재 투어 상품'
-        ]
-      },
-      Korea: {
-        restaurant: [
-          '한글 메뉴판 및 K-Food 메뉴',
-          'SNS 촬영 스팟 마련',
-          '카카오페이 결제 지원',
-          '한류 관련 BGM 재생'
-        ],
-        retail: [
-          'K-POP/드라마 굿즈 판매',
-          '한국 화장품 브랜드 입고',
-          '포토존 설치',
-          '모바일 결제 시스템'
-        ],
-        accommodation: [
-          '한국 드라마 시청 가능',
-          '한국식 어메니티 제공',
-          'WiFi 속도 최적화',
-          '늦은 체크인 허용'
-        ],
-        transport: [
-          'SNS 명소 투어',
-          '한국어 가이드 서비스',
-          '셀카/인증샷 도움',
-          'K-POP 관련 장소 투어'
-        ]
-      },
-      USA: {
-        restaurant: [
-          '영어 메뉴 및 직원 교육',
-          '다양한 식단 옵션 제공',
-          '신용카드 결제 필수',
-          '팁 시스템 안내'
-        ],
-        retail: [
-          '고급 브랜드 상품 진열',
-          '개별 맞춤 서비스',
-          '환불/교환 정책 명시',
-          '면세 쇼핑 안내'
-        ],
-        accommodation: [
-          '개인 프라이버시 보장',
-          '24시간 서비스',
-          '고급 어메니티 제공',
-          '컨시어지 서비스'
-        ],
-        transport: [
-          '개인 맞춤 투어',
-          '럭셔리 차량 서비스',
-          '유연한 일정 조정',
-          '프리미엄 패키지'
-        ]
-      },
-      China: {
-        restaurant: [
-          '중국어 메뉴판 준비',
-          '단체 할인 메뉴 제공',
-          '위챗페이 결제 지원',
-          '중국식 차 서비스'
-        ],
-        retail: [
-          '단체 구매 할인',
-          '중국어 안내 서비스',
-          '대량 구매 포장',
-          '중국 전통 선물 상품'
-        ],
-        accommodation: [
-          '단체 예약 시스템',
-          '중국 TV 채널',
-          '중국어 안내 서비스',
-          '그룹 활동 공간'
-        ],
-        transport: [
-          '단체 투어 패키지',
-          '중국어 가이드',
-          '쇼핑몰 위주 투어',
-          '사진 촬영 서비스'
-        ]
+  useEffect(() => {
+    const fetchInsights = async () => {
+      try {
+        setLoading(true);
+        // 실제 API 호출 대신 모의 데이터 사용
+        const mockData = {
+          yearly: {
+            trending_countries: ['Japan', 'Korea', 'Philippines'],
+            peak_months: ['March', 'July', 'December'],
+            business_opportunities: [
+              {
+                category: 'restaurant',
+                priority: 'high',
+                title: '일식 & 한식 레스토랑 수요 증가',
+                description: '일본과 한국 관광객 급증으로 현지 음식 수요 급상승',
+                actions: ['일본어/한국어 메뉴 준비', '현지 음식 메뉴 추가', '할랄 옵션 검토']
+              },
+              {
+                category: 'accommodation',
+                priority: 'high',
+                title: '중급 호텔/펜션 예약 급증',
+                description: '가족 단위 여행객 증가로 중간 가격대 숙박 시설 선호',
+                actions: ['패밀리룸 준비', '조식 서비스 강화', '픽업 서비스 제공']
+              },
+              {
+                category: 'retail',
+                priority: 'medium',
+                title: '기념품 & 현지 특산품 판매 기회',
+                description: '관광객들의 쇼핑 패턴 분석 결과 현지 특산품 선호도 높음',
+                actions: ['괌 특산품 진열', '면세점 연계', '온라인 배송 서비스']
+              }
+            ]
+          },
+          monthly: {
+            current_trends: ['성수기 준비', '계절성 메뉴', '프로모션 기획'],
+            seasonal_tips: [
+              '3월: 봄 휴가 시즌 - 가족 여행객 타겟',
+              '7월: 여름 성수기 - 액티비티 상품 강화',
+              '12월: 연말 휴가 - 커플 및 허니문 타겟'
+            ],
+            immediate_actions: [
+              '이번 주 예약 현황 점검',
+              '직원 교육 및 서비스 점검',
+              '재고 및 메뉴 최적화'
+            ]
+          }
+        };
+        
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setInsightsData(mockData);
+      } catch (error) {
+        console.error('인사이트 데이터 로드 오류:', error);
+      } finally {
+        setLoading(false);
       }
     };
 
-    return recommendations[countryKey]?.[businessType] || [];
+    fetchInsights();
+  }, [viewMode]);
+
+  const getBusinessIcon = (category) => {
+    switch (category) {
+      case 'restaurant': return <RestaurantMenu />;
+      case 'accommodation': return <Hotel />;
+      case 'retail': return <ShoppingBag />;
+      case 'transport': return <DirectionsCar />;
+      default: return <Business />;
+    }
   };
 
-  const getCurrentAlerts = () => {
-    const currentData = correlations.time_series[correlations.time_series.length - 1];
-    const previousData = correlations.time_series[correlations.time_series.length - 2];
-    
-    const alerts = [];
-    
-    ['japan', 'korea', 'usa', 'china'].forEach(country => {
-      const current = currentData[country];
-      const previous = previousData[country];
-      const change = ((current - previous) / previous * 100).toFixed(1);
-      
-      if (Math.abs(change) > 10) {
-        alerts.push({
-          country: country,
-          change: change,
-          type: change > 0 ? 'increase' : 'decrease'
-        });
-      }
-    });
-    
-    return alerts;
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'high': return 'error';
+      case 'medium': return 'warning';
+      case 'low': return 'info';
+      default: return 'default';
+    }
   };
 
-  const TabPanel = ({ children, value, index, ...other }) => (
-    <div
-      role="tabpanel"
-      hidden={value !== index}
-      {...other}
-    >
-      {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
-    </div>
-  );
+  if (loading) {
+    return <Box sx={{ p: 2, textAlign: 'center' }}>인사이트 분석 중...</Box>;
+  }
+
+  if (!insightsData) {
+    return <Box sx={{ p: 2, textAlign: 'center' }}>데이터를 불러올 수 없습니다.</Box>;
+  }
 
   return (
     <Box>
-      <Typography variant="h5" gutterBottom color="primary">
-        💼 비즈니스 인사이트 & 액션 가이드
+      <Typography variant="h5" component="h2" gutterBottom fontWeight="bold">
+        💡 비즈니스 인사이트
+        <Chip 
+          label={viewMode === 'yearly' ? '장기 전략' : '단기 액션'} 
+          size="small" 
+          color="secondary" 
+          sx={{ ml: 2 }} 
+        />
       </Typography>
 
-      {/* 즉시 대응 알림 */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          🚨 즉시 대응 필요
-        </Typography>
-        {getCurrentAlerts().map((alert, index) => {
-          const country = countries.find(c => c.key.toLowerCase() === alert.country);
-          return (
-            <Alert 
-              key={index}
-              severity={alert.type === 'increase' ? 'success' : 'warning'}
-              sx={{ mb: 1 }}
-            >
-              {country?.flag} {country?.name} 관광객 {alert.type === 'increase' ? '급증' : '급감'} 
-              ({alert.change > 0 ? '+' : ''}{alert.change}%) - 
-              {alert.type === 'increase' ? '재고 확보 및 서비스 준비 필요' : '마케팅 강화 및 할인 이벤트 고려'}
-            </Alert>
-          );
-        })}
-      </Box>
+      {viewMode === 'yearly' ? (
+        <Box>
+          {/* 연간 트렌드 요약 */}
+          <Alert severity="info" sx={{ mb: 3 }}>
+            📈 <strong>2024년 주요 트렌드:</strong> {insightsData.yearly.trending_countries.join(', ')} 
+            관광객 증가, 성수기는 {insightsData.yearly.peak_months.join(', ')}
+          </Alert>
 
-      {/* TOP 3 국가 포커스 */}
-      <Box sx={{ mb: 3 }}>
-        <Typography variant="h6" gutterBottom>
-          🎯 집중 타겟 국가 (GDP 기여도 기준)
-        </Typography>
-        <Grid container spacing={2}>
-          {getTopCountries().map((country, index) => {
-            const countryInfo = countries.find(c => c.key === country.country);
-            return (
-              <Grid item xs={12} md={4} key={country.country}>
-                <Card sx={{ height: '100%', bgcolor: index === 0 ? '#fff3e0' : 'inherit' }}>
-                  <CardContent>
-                    <Box display="flex" alignItems="center" justifyContent="space-between">
-                      <Typography variant="h6">
-                        {countryInfo?.flag} {countryInfo?.name}
-                      </Typography>
-                      {index === 0 && <Chip label="최우선" color="warning" size="small" />}
-                    </Box>
-                    
-                    <Typography variant="h5" color="primary" sx={{ my: 1 }}>
-                      ${country.total_economic_impact}M
-                    </Typography>
-                    
-                    <Typography variant="body2" color="text.secondary">
-                      관광객: {(country.avg_tourists / 1000).toFixed(0)}K명
-                    </Typography>
-                    
-                    <Box sx={{ mt: 2 }}>
-                      {countryInfo?.traits.map((trait, i) => (
-                        <Chip key={i} label={trait} size="small" sx={{ mr: 0.5, mb: 0.5 }} />
-                      ))}
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            );
-          })}
-        </Grid>
-      </Box>
+          {/* 비즈니스 기회 */}
+          <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+            🎯 주요 비즈니스 기회
+          </Typography>
 
-      {/* 업종별 가이드 */}
-      <Box>
-        <Typography variant="h6" gutterBottom>
-          🏪 업종별 맞춤 가이드
-        </Typography>
-        
-        <Tabs value={selectedTab} onChange={(e, v) => setSelectedTab(v)} sx={{ mb: 2 }}>
-          {businessTypes.map((type, index) => (
-            <Tab 
-              key={type.type} 
-              label={
-                <Box display="flex" alignItems="center">
-                  {type.icon}
-                  <Typography sx={{ ml: 1 }}>{type.name}</Typography>
+          {insightsData.yearly.business_opportunities.map((opportunity, index) => (
+            <Accordion key={index} sx={{ mb: 2 }}>
+              <AccordionSummary expandIcon={<ExpandMore />}>
+                <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                  {getBusinessIcon(opportunity.category)}
+                  <Typography variant="h6" sx={{ ml: 2, flexGrow: 1 }}>
+                    {opportunity.title}
+                  </Typography>
+                  <Chip 
+                    label={opportunity.priority.toUpperCase()} 
+                    color={getPriorityColor(opportunity.priority)}
+                    size="small"
+                  />
                 </Box>
-              }
-            />
-          ))}
-        </Tabs>
-
-        {businessTypes.map((businessType, index) => (
-          <TabPanel key={businessType.type} value={selectedTab} index={index}>
-            <Grid container spacing={3}>
-              {getTopCountries().map((country) => {
-                const countryInfo = countries.find(c => c.key === country.country);
-                const recommendations = getCountryRecommendations(country.country, businessType.type);
+              </AccordionSummary>
+              <AccordionDetails>
+                <Typography variant="body2" color="text.secondary" paragraph>
+                  {opportunity.description}
+                </Typography>
                 
-                return (
-                  <Grid item xs={12} md={6} key={country.country}>
-                    <Accordion>
-                      <AccordionSummary expandIcon={<ExpandMore />}>
-                        <Box display="flex" alignItems="center">
-                          <Typography variant="h6" sx={{ mr: 1 }}>
-                            {countryInfo?.flag}
-                          </Typography>
-                          <Typography variant="h6">
-                            {countryInfo?.name} 타겟 전략
-                          </Typography>
-                          <Chip 
-                            label={`$${country.total_economic_impact}M`} 
-                            size="small" 
-                            sx={{ ml: 'auto' }}
-                          />
-                        </Box>
-                      </AccordionSummary>
-                      <AccordionDetails>
-                        <List dense>
-                          {recommendations.map((rec, i) => (
-                            <ListItem key={i}>
-                              <ListItemIcon>
-                                <Lightbulb color="primary" />
-                              </ListItemIcon>
-                              <ListItemText primary={rec} />
-                            </ListItem>
-                          ))}
-                        </List>
-                        
-                        <Box sx={{ mt: 2 }}>
-                          <Typography variant="subtitle2" gutterBottom>
-                            선호 서비스:
-                          </Typography>
-                          <Box>
-                            {countryInfo?.preferences.map((pref, i) => (
-                              <Chip 
-                                key={i} 
-                                label={pref} 
-                                size="small" 
-                                variant="outlined"
-                                sx={{ mr: 0.5, mb: 0.5 }}
-                              />
-                            ))}
-                          </Box>
-                        </Box>
-                      </AccordionDetails>
-                    </Accordion>
-                  </Grid>
-                );
-              })}
+                <Typography variant="subtitle1" gutterBottom fontWeight="bold">
+                  추천 액션 플랜:
+                </Typography>
+                
+                <List dense>
+                  {opportunity.actions.map((action, actionIndex) => (
+                    <ListItem key={actionIndex} sx={{ py: 0.5 }}>
+                      <ListItemIcon>
+                        <TrendingUp />
+                      </ListItemIcon>
+                      <ListItemText primary={action} />
+                    </ListItem>
+                  ))}
+                </List>
+              </AccordionDetails>
+            </Accordion>
+          ))}
+        </Box>
+      ) : (
+        <Box>
+          {/* 월별 현황 */}
+          <Grid container spacing={3}>
+            {/* 이번 달 주요 트렌드 */}
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    📊 이번 달 주요 트렌드
+                  </Typography>
+                  {insightsData.monthly.current_trends.map((trend, index) => (
+                    <Chip 
+                      key={index}
+                      label={trend} 
+                      variant="outlined" 
+                      sx={{ mr: 1, mb: 1 }}
+                    />
+                  ))}
+                </CardContent>
+              </Card>
             </Grid>
-          </TabPanel>
-        ))}
+
+            {/* 계절별 팁 */}
+            <Grid item xs={12} md={6}>
+              <Card>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    🌟 계절별 마케팅 팁
+                  </Typography>
+                  <List dense>
+                    {insightsData.monthly.seasonal_tips.map((tip, index) => (
+                      <ListItem key={index} sx={{ py: 0.5 }}>
+                        <ListItemIcon>
+                          <Language />
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={tip}
+                          primaryTypographyProps={{ variant: 'body2' }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* 즉시 실행 가능한 액션 */}
+            <Grid item xs={12}>
+              <Card sx={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white'
+              }}>
+                <CardContent>
+                  <Typography variant="h6" gutterBottom>
+                    ⚡ 이번 주 즉시 실행 액션
+                  </Typography>
+                  <Grid container spacing={2}>
+                    {insightsData.monthly.immediate_actions.map((action, index) => (
+                      <Grid item xs={12} sm={4} key={index}>
+                        <Box sx={{ 
+                          p: 2, 
+                          border: '1px solid rgba(255,255,255,0.3)',
+                          borderRadius: 1,
+                          textAlign: 'center',
+                          backgroundColor: 'rgba(255,255,255,0.1)'
+                        }}>
+                          <Typography variant="body1" fontWeight="bold">
+                            {action}
+                          </Typography>
+                        </Box>
+                      </Grid>
+                    ))}
+                  </Grid>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+
+          {/* 월별 특별 알림 */}
+          <Alert severity="warning" sx={{ mt: 3 }}>
+            🔔 <strong>이번 달 특별 주의사항:</strong> 성수기 진입으로 인한 예약 증가 예상. 
+            직원 스케줄 및 재고 관리에 특별한 주의가 필요합니다.
+          </Alert>
+        </Box>
+      )}
+
+      {/* 공통 하단 정보 */}
+      <Box sx={{ mt: 4, p: 2, backgroundColor: 'grey.50', borderRadius: 1 }}>
+        <Typography variant="h6" gutterBottom>
+          📞 추가 지원 서비스
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          • 관광청 비즈니스 상담: (671) 646-5278<br/>
+          • 마케팅 지원 프로그램: visitguam.com/business<br/>
+          • 언어 서비스 지원: translate.guam.gov
+        </Typography>
       </Box>
     </Box>
   );
