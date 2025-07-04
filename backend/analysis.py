@@ -227,7 +227,32 @@ def get_country_rankings(year="all"):
     # 총 경제적 영향도 기준으로 정렬
     rankings.sort(key=lambda x: x['total_economic_impact'], reverse=True)
     
-    return {"rankings": rankings}
+    # 추가 통계 정보 계산
+    if year == "all":
+        # 전체 기간: 연간 평균과 총 누적
+        total_annual_avg = sum(ranking["avg_tourists"] for ranking in rankings)
+        total_cumulative = 0
+        years_count = len(filtered_data)
+        
+        # 누적 총합 계산 (모든 연도의 각 국가별 관광객 수 합계)
+        for year_key in filtered_data.keys():
+            year_total = sum(filtered_data[year_key][country] for country in countries)
+            total_cumulative += year_total
+    else:
+        # 특정 연도: 해당 연도 총합
+        total_annual_avg = sum(ranking["avg_tourists"] for ranking in rankings)
+        total_cumulative = total_annual_avg
+        years_count = 1
+    
+    return {
+        "rankings": rankings,
+        "summary": {
+            "total_annual_average": int(total_annual_avg),
+            "total_cumulative": int(total_cumulative),
+            "years_count": years_count,
+            "period": f"2014-2024년 ({years_count}년간)" if year == "all" else f"{year}년"
+        }
+    }
 
 def get_correlations(year="all"):
     """시계열 상관관계 데이터 반환"""

@@ -32,9 +32,10 @@ const DataSummary = ({ selectedYear, filterYear }) => {
 
   const generateSummary = (data, year) => {
     const rankings = data.rankings || [];
+    const summary = data.summary || {};
     
-    // 기본 통계 계산
-    const totalTourists = rankings.reduce((sum, country) => sum + country.avg_tourists, 0);
+    // 백엔드에서 제공하는 summary 정보 사용
+    const totalTourists = year === 'all' ? summary.total_cumulative : summary.total_annual_average;
     const totalEconomicImpact = rankings.reduce((sum, country) => sum + country.total_economic_impact, 0);
     
     // 상위 3개국
@@ -44,9 +45,11 @@ const DataSummary = ({ selectedYear, filterYear }) => {
     const yearInfo = getYearSpecificInfo(year);
     
     return {
-      period: year === 'all' ? '2014-2024년 전체' : `${year}년`,
-      totalTourists: Math.round(totalTourists),
+      period: summary.period || (year === 'all' ? '2014-2024년 전체' : `${year}년`),
+      totalTourists: Math.round(totalTourists || 0),
       totalEconomicImpact: Math.round(totalEconomicImpact * 10) / 10,
+      annualAverage: year === 'all' ? Math.round(summary.total_annual_average || 0) : null,
+      yearsCount: summary.years_count || 1,
       topCountries,
       marketLeader: topCountries[0],
       emergingMarket: rankings[rankings.length - 1],
@@ -168,8 +171,13 @@ const DataSummary = ({ selectedYear, filterYear }) => {
                 {summaryData.totalTourists.toLocaleString()}
               </h3>
               <p className="mb-0 opacity-75">
-                총 관광객 수
+                {selectedYear === 'all' ? '총 누적 관광객' : '총 관광객 수'}
               </p>
+              {summaryData.annualAverage && (
+                <small className="opacity-75">
+                  (연평균: {summaryData.annualAverage.toLocaleString()}명)
+                </small>
+              )}
             </Card.Body>
           </Card>
         </Col>

@@ -65,60 +65,44 @@ function MonthlyTrends({ selectedYear, filterYear }) {
         title: '연도별 장기 트렌드 (2014-2024)'
       };
     } else {
-      // 특정 연도: 월별 패턴 생성
+      // 특정 연도: 실제 월별 데이터 사용
       const yearNum = parseInt(year);
-      const monthlyTrends = generateMonthlyPattern(yearNum);
-      return {
-        trends: monthlyTrends,
-        correlations: correlationData.correlations || {},
-        mode: 'monthly',
-        title: `${year}년 월별 패턴 분석`
-      };
+      const yearlyGrouped = monthlyData.yearly_grouped || {};
+      
+      // 해당 연도의 월별 데이터가 있는지 확인
+      if (yearlyGrouped[yearNum]) {
+        const monthlyTrends = yearlyGrouped[yearNum].map(monthData => ({
+          month: monthData.month,
+          monthNumber: monthData.month_num,
+          japan: monthData.japan || 0,
+          korea: monthData.korea || 0,
+          usa: monthData.usa || 0,
+          china: monthData.china || 0,
+          philippines: monthData.philippines || 0,
+          taiwan: monthData.taiwan || 0,
+          total: (monthData.japan || 0) + (monthData.korea || 0) + (monthData.usa || 0) + 
+                 (monthData.china || 0) + (monthData.philippines || 0) + (monthData.taiwan || 0)
+        }));
+        
+        return {
+          trends: monthlyTrends,
+          correlations: correlationData.correlations || {},
+          mode: 'monthly',
+          title: `${year}년 월별 패턴 분석 (실제 데이터)`
+        };
+      } else {
+        // 데이터가 없는 경우 빈 배열 반환
+        return {
+          trends: [],
+          correlations: correlationData.correlations || {},
+          mode: 'monthly',
+          title: `${year}년 데이터 없음`
+        };
+      }
     }
   };
 
-  const generateMonthlyPattern = (year) => {
-    // 연도별 특성을 반영한 월별 데이터 생성
-    const basePatterns = {
-      2024: { multiplier: 1.2, seasonality: 'strong' },
-      2023: { multiplier: 1.1, seasonality: 'strong' },
-      2022: { multiplier: 0.8, seasonality: 'moderate' },
-      2021: { multiplier: 0.3, seasonality: 'weak' },
-      2020: { multiplier: 0.4, seasonality: 'disrupted' },
-      2019: { multiplier: 1.3, seasonality: 'peak' },
-      2018: { multiplier: 1.2, seasonality: 'strong' },
-      2017: { multiplier: 1.1, seasonality: 'moderate' },
-      2016: { multiplier: 1.0, seasonality: 'moderate' },
-      2015: { multiplier: 0.9, seasonality: 'growing' },
-      2014: { multiplier: 0.8, seasonality: 'baseline' }
-    };
 
-    const pattern = basePatterns[year] || { multiplier: 1.0, seasonality: 'moderate' };
-    const months = ['1월', '2월', '3월', '4월', '5월', '6월', '7월', '8월', '9월', '10월', '11월', '12월'];
-    
-    // 기본 월별 패턴 (성수기/비수기 반영)
-    const baseValues = {
-      japan: [45000, 48000, 55000, 52000, 49000, 46000, 58000, 56000, 50000, 53000, 51000, 60000],
-      korea: [38000, 42000, 48000, 45000, 41000, 38000, 50000, 48000, 43000, 46000, 44000, 52000],
-      usa: [6500, 7000, 8200, 7800, 7200, 6800, 8800, 8500, 7500, 8000, 7700, 9200],
-      china: [2800, 3200, 4100, 3800, 3400, 3000, 4500, 4200, 3600, 3900, 3700, 4800],
-      philippines: [1200, 1400, 1800, 1600, 1300, 1100, 2000, 1900, 1500, 1700, 1600, 2100],
-      taiwan: [3200, 3600, 4400, 4000, 3700, 3400, 4800, 4600, 4000, 4300, 4100, 5000]
-    };
-
-    return months.map((month, index) => ({
-      month,
-      monthNumber: index + 1,
-      japan: Math.round(baseValues.japan[index] * pattern.multiplier),
-      korea: Math.round(baseValues.korea[index] * pattern.multiplier),
-      usa: Math.round(baseValues.usa[index] * pattern.multiplier),
-      china: Math.round(baseValues.china[index] * pattern.multiplier),
-      philippines: Math.round(baseValues.philippines[index] * pattern.multiplier),
-      taiwan: Math.round(baseValues.taiwan[index] * pattern.multiplier),
-      total: Math.round((baseValues.japan[index] + baseValues.korea[index] + baseValues.usa[index] + 
-                       baseValues.china[index] + baseValues.philippines[index] + baseValues.taiwan[index]) * pattern.multiplier)
-    }));
-  };
 
   const getCountryColor = (country) => {
     const colors = {
