@@ -43,10 +43,10 @@ def load_real_data():
             'China': 'sum'
         }).reset_index()
         
-        # 4. 월별 데이터 정리 (최근 3년)
+        # 4. 월별 데이터 정리 (전체 기간)
         monthly_data = []
         for _, row in tourism_df.iterrows():
-            if row['Year'] >= 2022:  # 최근 3년 데이터
+            if row['Year'] >= 2014:  # 2014년부터 모든 데이터
                 monthly_data.append({
                     'year': int(row['Year']),
                     'month': int(row['Month_num']),
@@ -59,6 +59,11 @@ def load_real_data():
                     'china': float(row['China']) if pd.notna(row['China']) else 0,
                     'total': float(row['Total Arrivals']) if pd.notna(row['Total Arrivals']) else 0
                 })
+        
+        # 디버깅: 월별 데이터 개수 확인
+        print(f"로드된 월별 데이터 개수: {len(monthly_data)}")
+        years_in_monthly = set(item['year'] for item in monthly_data)
+        print(f"월별 데이터에 포함된 연도들: {sorted(years_in_monthly)}")
         
         # 5. 연별 데이터 정리
         yearly_data = {}
@@ -227,20 +232,65 @@ def get_country_rankings(year="all"):
 def get_correlations(year="all"):
     """시계열 상관관계 데이터 반환"""
     yearly_data = DATA['yearly']
+    monthly_data = DATA['monthly']
     countries = ['japan', 'korea', 'usa', 'china', 'philippines', 'taiwan']
     
-    # 연도별 필터링
     if year != "all" and year.isdigit():
         target_year = int(year)
-        if target_year in yearly_data:
-            # 특정 연도의 경우 단일 데이터 포인트 반환
-            filtered_data = {target_year: yearly_data[target_year]}
+        
+        # 특정 연도의 경우 월별 데이터를 사용해서 분석
+        year_monthly_data = [data for data in monthly_data if data['year'] == target_year]
+        
+        # 디버깅: 특정 연도 월별 데이터 확인
+        print(f"연도 {target_year}의 월별 데이터 개수: {len(year_monthly_data)}")
+        
+        if year_monthly_data:
+            # 해당 연도의 GDP 정보 가져오기
+            year_gdp = yearly_data.get(target_year, {}).get('gdp', 0)
+            
+            # 월별 시계열 데이터 구성
+            time_series = []
+            for month_data in year_monthly_data:
+                month_entry = {
+                    "year": f"{month_data['year']}-{month_data['month']:02d}",
+                    "month": month_data['month'],
+                    "total": month_data['total'],
+                    "gdp": year_gdp  # 해당 연도의 GDP 값 추가
+                }
+                for country in countries:
+                    month_entry[country] = month_data[country]
+                time_series.append(month_entry)
+            
+            # 월별 데이터로 상관관계 계산 (총 관광객 수와 각 국가별 관광객 수)
+            correlations = {}
+            total_values = [data['total'] for data in year_monthly_data]
+            
+            for country in countries:
+                country_values = [data[country] for data in year_monthly_data]
+                if len(set(country_values)) > 1 and len(country_values) > 1:
+                    correlation = np.corrcoef(total_values, country_values)[0, 1]
+                else:
+                    correlation = 0
+                correlations[country] = round(correlation, 3)
+            
+            return {
+                "time_series": time_series,
+                "correlations": correlations,
+                "analysis_type": "monthly",
+                "note": f"{target_year}년 월별 관광객 패턴 상관관계"
+            }
         else:
-            filtered_data = yearly_data
+            # 해당 연도 월별 데이터가 없으면 연도 범위로 분석 (±2년)
+            start_year = max(2014, target_year - 2)
+            end_year = min(2022, target_year + 2)
+            
+            filtered_data = {y: yearly_data[y] for y in yearly_data.keys() 
+                           if start_year <= y <= end_year}
     else:
+        # 전체 기간 분석
         filtered_data = yearly_data
     
-    # 시계열 데이터 구성
+    # 연도별 시계열 데이터 구성
     time_series = []
     for year_key in sorted(filtered_data.keys()):
         year_data = {"year": year_key, "gdp": filtered_data[year_key]['gdp']}
@@ -248,7 +298,7 @@ def get_correlations(year="all"):
             year_data[country] = filtered_data[year_key][country]
         time_series.append(year_data)
     
-    # 상관관계 계산
+    # GDP와 관광객 수 상관관계 계산
     correlations = {}
     gdp_values = [filtered_data[year_key]['gdp'] for year_key in filtered_data.keys()]
     
@@ -260,9 +310,14 @@ def get_correlations(year="all"):
             correlation = 0
         correlations[country] = round(correlation, 3)
     
+    analysis_type = "yearly" if year == "all" else "range"
+    note = "전체 기간 GDP-관광객 상관관계" if year == "all" else f"{year}년 전후 기간 분석"
+    
     return {
         "time_series": time_series,
-        "correlations": correlations
+        "correlations": correlations,
+        "analysis_type": analysis_type,
+        "note": note
     }
 
 def get_monthly_data(year="all"):

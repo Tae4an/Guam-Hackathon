@@ -11,15 +11,17 @@ import {
   Legend
 } from 'recharts';
 
-const CorrelationChart = ({ viewMode = 'yearly' }) => {
+const CorrelationChart = ({ selectedYear, filterYear }) => {
   const [correlationData, setCorrelationData] = useState([]);
+  const [analysisType, setAnalysisType] = useState('yearly');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCorrelations = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8000/api/correlations');
+        const yearParam = selectedYear === 'all' ? 'all' : selectedYear;
+        const response = await fetch(`http://localhost:8000/api/correlations?year=${yearParam}`);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -29,6 +31,7 @@ const CorrelationChart = ({ viewMode = 'yearly' }) => {
         console.log('Correlation data received:', data); // 디버깅용
         
         const timeSeriesData = data.time_series || [];
+        setAnalysisType(data.analysis_type || 'yearly');
         console.log('Time series data:', timeSeriesData); // 디버깅용
         
         setCorrelationData(timeSeriesData);
@@ -42,7 +45,7 @@ const CorrelationChart = ({ viewMode = 'yearly' }) => {
     };
 
     fetchCorrelations();
-  }, []);
+  }, [selectedYear, filterYear]);
 
   // 국가별 색상 매핑
   const countryColors = {
@@ -57,11 +60,26 @@ const CorrelationChart = ({ viewMode = 'yearly' }) => {
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      // 라벨 포맷팅
+      let formattedLabel;
+      if (analysisType === 'monthly') {
+        // 월별 데이터인 경우: "2024-01" -> "2024년 1월" 또는 month 필드 사용
+        const currentData = correlationData.find(d => d.year === label || d.month === label);
+        if (currentData && currentData.month) {
+          formattedLabel = `${currentData.year.split('-')[0]}년 ${currentData.month}월`;
+        } else {
+          formattedLabel = label.includes('-') ? 
+            `${label.split('-')[0]}년 ${parseInt(label.split('-')[1])}월` : 
+            `${label}월`;
+        }
+      } else {
+        // 연도별 데이터인 경우
+        formattedLabel = `${label}년`;
+      }
+
       return (
         <div className="bg-white p-3 border rounded shadow-sm">
-          <h6 className="fw-bold mb-2">
-            {viewMode === 'yearly' ? `${label}년` : `${label}월`}
-          </h6>
+          <h6 className="fw-bold mb-2">{formattedLabel}</h6>
           {payload.map((entry, index) => (
             <p 
               key={index} 
@@ -103,7 +121,16 @@ const CorrelationChart = ({ viewMode = 'yearly' }) => {
   }
 
   const formatXAxisLabel = (tickItem) => {
-    return viewMode === 'yearly' ? tickItem : `${tickItem}월`;
+    if (analysisType === 'monthly') {
+      return `${tickItem}월`;
+    } else {
+      return `${tickItem}년`;
+    }
+  };
+
+  // x축 데이터 키 결정
+  const getXAxisDataKey = () => {
+    return analysisType === 'monthly' ? 'month' : 'year';
   };
 
   const getHighestCorrelationCountry = () => {
@@ -139,8 +166,10 @@ const CorrelationChart = ({ viewMode = 'yearly' }) => {
         <small className="text-muted">
           📊 데이터 포인트: {correlationData.length}개 | 
           기간: {correlationData.length > 0 ? 
-            `${Math.min(...correlationData.map(d => d.year))} - ${Math.max(...correlationData.map(d => d.year))}년` 
-            : '데이터 없음'}
+            (analysisType === 'monthly' ? 
+              `${selectedYear}년 월별 분석` : 
+              `${Math.min(...correlationData.map(d => d.year))} - ${Math.max(...correlationData.map(d => d.year))}년`
+            ) : '데이터 없음'}
         </small>
       </div>
 
@@ -158,13 +187,13 @@ const CorrelationChart = ({ viewMode = 'yearly' }) => {
           >
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis 
-              dataKey="year" 
+              dataKey={getXAxisDataKey()} 
               tickFormatter={formatXAxisLabel}
               tick={{ fontSize: 12 }}
               stroke="#666"
               type="number"
               scale="linear"
-              domain={['dataMin', 'dataMax']}
+              domain={analysisType === 'monthly' ? [1, 12] : ['dataMin', 'dataMax']}
             />
             <YAxis 
               yAxisId="left"
@@ -252,7 +281,7 @@ const CorrelationChart = ({ viewMode = 'yearly' }) => {
           </Alert>
         )}
         
-        {viewMode === 'yearly' ? (
+        {analysisType === 'yearly' ? (
           <Alert variant="info" className="mb-0">
             <small>
               💡 <strong>분석 포인트:</strong> 장기 트렌드를 통해 GDP와 관광객 수의 
