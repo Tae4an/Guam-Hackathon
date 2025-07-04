@@ -35,28 +35,28 @@ async def root():
     return {"message": "괌 비즈니스 인사이트 API에 오신 것을 환영합니다!"}
 
 @app.get("/api/rankings")
-async def get_rankings():
+async def get_rankings(year: str = "all"):
     """국가별 경제 기여도 순위 반환"""
     try:
-        rankings = get_country_rankings()
+        rankings = get_country_rankings(year)
         return rankings
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/correlations")
-async def get_correlations_endpoint():
+async def get_correlations_endpoint(year: str = "all"):
     """시계열 상관관계 데이터 반환"""
     try:
-        correlations = get_correlations()
+        correlations = get_correlations(year)
         return correlations
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/monthly")
-async def get_monthly_endpoint():
+async def get_monthly_endpoint(year: str = "all"):
     """월별 데이터 및 계절성 분석 반환"""
     try:
-        monthly_data = get_monthly_data()
+        monthly_data = get_monthly_data(year)
         return monthly_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

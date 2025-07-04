@@ -14,7 +14,8 @@ function CountryRankingChart({ selectedYear, filterYear }) {
   const fetchRankingData = async () => {
     try {
       setLoading(true);
-      const response = await fetch('http://localhost:8000/api/rankings');
+      const yearParam = selectedYear === 'all' ? 'all' : selectedYear;
+      const response = await fetch(`http://localhost:8000/api/rankings?year=${yearParam}`);
       const data = await response.json();
       
       if (response.ok && data.rankings) {

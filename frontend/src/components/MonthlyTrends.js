@@ -29,10 +29,12 @@ function MonthlyTrends({ selectedYear, filterYear }) {
     try {
       setLoading(true);
       
+      const yearParam = selectedYear === 'all' ? 'all' : selectedYear;
+      
       // 병렬로 데이터 가져오기
       const [monthlyResponse, correlationResponse] = await Promise.all([
-        fetch('http://localhost:8000/api/monthly'),
-        fetch('http://localhost:8000/api/correlations')
+        fetch(`http://localhost:8000/api/monthly?year=${yearParam}`),
+        fetch(`http://localhost:8000/api/correlations?year=${yearParam}`)
       ]);
 
       if (monthlyResponse.ok && correlationResponse.ok) {

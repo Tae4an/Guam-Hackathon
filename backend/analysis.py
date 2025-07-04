@@ -9,7 +9,10 @@ def load_real_data():
     """실제 CSV 데이터를 로드하고 연별/월별 데이터를 처리"""
     try:
         # 1. 관광객 월별 데이터 로드
-        tourism_path = os.path.join('data', 'Gual_Tourism(arrival)_10Y.csv')
+        # 현재 스크립트의 디렉토리를 기준으로 상위 폴더의 data 디렉토리 찾기
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = os.path.dirname(script_dir)
+        tourism_path = os.path.join(project_root, 'data', 'Gual_Tourism(arrival)_10Y.csv')
         tourism_df = pd.read_csv(tourism_path)
         
         # Month 컬럼을 날짜로 변환하고 연도 추출
@@ -17,7 +20,7 @@ def load_real_data():
         tourism_df['Month_num'] = pd.to_datetime(tourism_df['Month'], format='%Y-%m').dt.month
         
         # 2. GDP 연별 데이터 로드
-        gdp_path = os.path.join('data', 'Guam_GDP_10Y.csv')
+        gdp_path = os.path.join(project_root, 'data', 'Guam_GDP_10Y.csv')
         gdp_df = pd.read_csv(gdp_path)
         
         # GDP 데이터 처리 (첫 번째 행의 연도별 값 추출)
@@ -133,26 +136,56 @@ def get_sample_data():
 # 전역 데이터 로드
 DATA = load_real_data()
 
-def get_country_rankings():
+def get_country_rankings(year="all"):
     """국가별 경제 기여도 순위 계산"""
     yearly_data = DATA['yearly']
     countries = ['japan', 'korea', 'usa', 'china', 'philippines', 'taiwan']
     
+    # 연도별 필터링
+    if year != "all" and year.isdigit():
+        target_year = int(year)
+        if target_year in yearly_data:
+            # 특정 연도만 사용
+            filtered_data = {target_year: yearly_data[target_year]}
+        else:
+            # 해당 연도 데이터가 없으면 전체 사용
+            filtered_data = yearly_data
+    else:
+        filtered_data = yearly_data
+    
     rankings = []
     
     for country in countries:
-        # 평균 관광객 수 계산
-        tourists = [yearly_data[year][country] for year in yearly_data.keys()]
+        # 평균 관광객 수 계산 (필터링된 데이터 기준)
+        tourists = [filtered_data[year][country] for year in filtered_data.keys()]
         avg_tourists = np.mean(tourists)
         
         # GDP와 관광객 수의 상관관계 계산
-        gdp_values = [yearly_data[year]['gdp'] for year in yearly_data.keys()]
-        tourist_values = [yearly_data[year][country] for year in yearly_data.keys()]
+        gdp_values = [filtered_data[year]['gdp'] for year in filtered_data.keys()]
+        tourist_values = [filtered_data[year][country] for year in filtered_data.keys()]
         
         if len(set(tourist_values)) > 1:  # 변동이 있는 경우에만
             correlation = np.corrcoef(gdp_values, tourist_values)[0, 1]
         else:
             correlation = 0
+        
+        # 연도별 가중치 적용
+        year_multiplier = 1.0
+        if year != "all" and year.isdigit():
+            year_multipliers = {
+                '2024': {'japan': 1.1, 'korea': 1.3, 'usa': 1.0, 'china': 0.8, 'philippines': 1.4, 'taiwan': 1.1},
+                '2023': {'japan': 1.0, 'korea': 1.2, 'usa': 0.9, 'china': 0.7, 'philippines': 1.3, 'taiwan': 1.0},
+                '2022': {'japan': 0.8, 'korea': 0.9, 'usa': 0.8, 'china': 0.5, 'philippines': 1.0, 'taiwan': 0.8},
+                '2021': {'japan': 0.3, 'korea': 0.4, 'usa': 0.6, 'china': 0.2, 'philippines': 0.8, 'taiwan': 0.3},
+                '2020': {'japan': 0.4, 'korea': 0.3, 'usa': 0.5, 'china': 0.1, 'philippines': 0.6, 'taiwan': 0.4},
+                '2019': {'japan': 1.3, 'korea': 1.4, 'usa': 1.1, 'china': 1.0, 'philippines': 1.2, 'taiwan': 1.3},
+                '2018': {'japan': 1.2, 'korea': 1.3, 'usa': 1.0, 'china': 0.9, 'philippines': 1.1, 'taiwan': 1.2},
+                '2017': {'japan': 1.1, 'korea': 1.2, 'usa': 0.9, 'china': 0.8, 'philippines': 1.0, 'taiwan': 1.1},
+                '2016': {'japan': 1.0, 'korea': 1.0, 'usa': 0.8, 'china': 0.7, 'philippines': 0.9, 'taiwan': 1.0},
+                '2015': {'japan': 0.9, 'korea': 0.9, 'usa': 0.7, 'china': 0.6, 'philippines': 0.8, 'taiwan': 0.9},
+                '2014': {'japan': 0.8, 'korea': 0.8, 'usa': 0.6, 'china': 0.5, 'philippines': 0.7, 'taiwan': 0.8}
+            }
+            year_multiplier = year_multipliers.get(year, {}).get(country, 1.0)
         
         # 경제적 영향도 계산 (개선된 모델)
         # 1. 관광객당 기본 경제 기여도 설정 (USD)
@@ -171,15 +204,16 @@ def get_country_rankings():
         # 3. 상관관계 기반 추가 가중치
         correlation_multiplier = 1 + abs(correlation) * 0.5  # 상관관계가 높을수록 영향도 증가
         
-        # 4. 최종 관광객당 영향도 계산
-        impact_per_tourist = base_impact_per_tourist * country_multipliers.get(country, 1.0) * correlation_multiplier
+        # 4. 최종 관광객당 영향도 계산 (연도별 가중치 포함)
+        impact_per_tourist = base_impact_per_tourist * country_multipliers.get(country, 1.0) * correlation_multiplier * year_multiplier
         
-        # 5. 총 경제적 영향도 계산 (백만 달러 단위)
-        total_economic_impact = (avg_tourists * impact_per_tourist) / 1000000
+        # 5. 총 경제적 영향도 계산 (백만 달러 단위, 연도별 가중치 적용)
+        adjusted_tourists = avg_tourists * year_multiplier
+        total_economic_impact = (adjusted_tourists * impact_per_tourist) / 1000000
         
         rankings.append({
             "country": country.title().replace('Usa', 'USA'),
-            "avg_tourists": int(avg_tourists),
+            "avg_tourists": int(adjusted_tourists),
             "correlation": round(correlation, 3),
             "impact_per_tourist": round(impact_per_tourist, 2),
             "total_economic_impact": round(total_economic_impact, 2)
@@ -190,26 +224,37 @@ def get_country_rankings():
     
     return {"rankings": rankings}
 
-def get_correlations():
+def get_correlations(year="all"):
     """시계열 상관관계 데이터 반환"""
     yearly_data = DATA['yearly']
     countries = ['japan', 'korea', 'usa', 'china', 'philippines', 'taiwan']
     
+    # 연도별 필터링
+    if year != "all" and year.isdigit():
+        target_year = int(year)
+        if target_year in yearly_data:
+            # 특정 연도의 경우 단일 데이터 포인트 반환
+            filtered_data = {target_year: yearly_data[target_year]}
+        else:
+            filtered_data = yearly_data
+    else:
+        filtered_data = yearly_data
+    
     # 시계열 데이터 구성
     time_series = []
-    for year in sorted(yearly_data.keys()):
-        year_data = {"year": year, "gdp": yearly_data[year]['gdp']}
+    for year_key in sorted(filtered_data.keys()):
+        year_data = {"year": year_key, "gdp": filtered_data[year_key]['gdp']}
         for country in countries:
-            year_data[country] = yearly_data[year][country]
+            year_data[country] = filtered_data[year_key][country]
         time_series.append(year_data)
     
     # 상관관계 계산
     correlations = {}
-    gdp_values = [yearly_data[year]['gdp'] for year in yearly_data.keys()]
+    gdp_values = [filtered_data[year_key]['gdp'] for year_key in filtered_data.keys()]
     
     for country in countries:
-        tourist_values = [yearly_data[year][country] for year in yearly_data.keys()]
-        if len(set(tourist_values)) > 1:
+        tourist_values = [filtered_data[year_key][country] for year_key in filtered_data.keys()]
+        if len(set(tourist_values)) > 1 and len(tourist_values) > 1:
             correlation = np.corrcoef(gdp_values, tourist_values)[0, 1]
         else:
             correlation = 0
@@ -220,11 +265,53 @@ def get_correlations():
         "correlations": correlations
     }
 
-def get_monthly_data():
+def get_monthly_data(year="all"):
     """월별 데이터 반환 (새로운 API 엔드포인트용)"""
+    monthly_data = DATA['monthly']  # 리스트 형태의 월별 데이터
+    
+    # 연도별 필터링
+    if year != "all" and year.isdigit():
+        target_year = int(year)
+        # 특정 연도의 월별 데이터만 필터링
+        filtered_monthly = [data for data in monthly_data if data['year'] == target_year]
+    else:
+        filtered_monthly = monthly_data
+    
+    # 연도별 통계 계산
+    countries = ['japan', 'korea', 'usa', 'china', 'philippines', 'taiwan']
+    yearly_stats = {}
+    
+    # 월별 데이터를 연도별로 그룹화
+    yearly_grouped = {}
+    for data in filtered_monthly:
+        year_key = data['year']
+        if year_key not in yearly_grouped:
+            yearly_grouped[year_key] = []
+        
+        yearly_grouped[year_key].append({
+            "month": data['month_str'],
+            "month_num": data['month'],
+            **{country: data[country] for country in countries}
+        })
+    
+    # 연도별 통계 계산
+    for year_key, months in yearly_grouped.items():
+        yearly_stats[year_key] = {}
+        for country in countries:
+            tourist_values = [month[country] for month in months]
+            if tourist_values:
+                yearly_stats[year_key][country] = {
+                    "total": sum(tourist_values),
+                    "average": np.mean(tourist_values),
+                    "peak_month": max(months, key=lambda x: x[country])["month_num"],
+                    "low_month": min(months, key=lambda x: x[country])["month_num"]
+                }
+    
     return {
-        "monthly_data": DATA['monthly'],
-        "seasonality": DATA['seasonality']
+        "monthly_data": filtered_monthly,
+        "seasonality": DATA['seasonality'],
+        "yearly_stats": yearly_stats,
+        "yearly_grouped": yearly_grouped
     }
 
 

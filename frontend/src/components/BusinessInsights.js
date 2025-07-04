@@ -171,7 +171,7 @@ const BusinessInsights = ({ viewMode = 'yearly' }) => {
         <div className="spinner-border text-primary" role="status">
           <span className="visually-hidden">로딩 중...</span>
         </div>
-        <p className="mt-2 text-muted">실제 데이터 기반 인사이트 생성 중...</p>
+        <p className="mt-2 text-muted">데이터 기반 인사이트 생성 중...</p>
       </div>
     );
   }
@@ -193,7 +193,7 @@ const BusinessInsights = ({ viewMode = 'yearly' }) => {
           {/* 장기 전략 액션 */}
           <div className="mb-4">
             <h6 className="text-primary mb-3">
-              🎯 실제 데이터 기반 우선순위 액션
+              🎯 데이터 기반 우선순위 액션
             </h6>
             {currentInsights.priority_actions.map((action, index) => (
               <Card key={index} className="mb-3 border-0 shadow-sm">
@@ -253,9 +253,9 @@ const BusinessInsights = ({ viewMode = 'yearly' }) => {
 
           {/* 장기 전략 요약 */}
           <Alert variant="info" className="mb-0">
-            <h6 className="text-primary mb-2">📊 실제 데이터 인사이트</h6>
+            <h6 className="text-primary mb-2">📊 데이터 인사이트</h6>
             <div className="small">
-              <strong>핵심 포인트:</strong> 실제 관광청 데이터를 분석한 결과, 
+              <strong>핵심 포인트:</strong> 관광청 데이터를 분석한 결과, 
               일본이 압도적 1위 시장이며 한국이 급성장하고 있습니다. 
               이 두 국가에 집중하여 비즈니스 전략을 수립하는 것이 가장 효과적입니다.
             </div>
@@ -331,7 +331,7 @@ const BusinessInsights = ({ viewMode = 'yearly' }) => {
           <Alert variant="success" className="mb-0">
             <h6 className="text-success mb-2">💡 월별 패턴 기반 인사이트</h6>
             <div className="small">
-              <strong>핵심 포인트:</strong> 실제 월별 데이터 분석 결과를 바탕으로 
+              <strong>핵심 포인트:</strong> 월별 데이터 분석 결과를 바탕으로 
               계절성에 맞춘 운영 전략을 수립하여 연중 안정적인 수익을 확보할 수 있습니다.
             </div>
           </Alert>
